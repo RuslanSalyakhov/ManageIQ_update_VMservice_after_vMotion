@@ -306,7 +306,7 @@ def get_service_url_tags(vm_resource_name: str):
     print(color.BOLD + color.CYAN + user_info[0] + color.END)
     print(user_info[1])
 
-    return {'url': service_resource_url, 'tags': service_tags_data['tags'], 'data': service_tags_data}
+    return {'url': service_resource_url, 'tags': service_tags_data['tags'], 'data': service_tags_data, 'user': user_info}
 
 def get_user(user_id: str):
     
