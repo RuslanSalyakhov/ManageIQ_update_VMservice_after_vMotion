@@ -36,111 +36,163 @@ session.verify = False
 
 # Delete service using URL
 
-def delete_service(url: str):
+def delete_service(url: str, session: requests.Session):
+    """
+    Delete a service or VM based on the provided URL using the specified requests Session.
 
-    if len(str(url)) == 0:
+    Args:
+        url (str): The URL of the service or VM to be deleted.
+        session (requests.Session): An existing requests Session object for making HTTP requests.
+
+    Returns:
+        Any: The response from the deletion request.
+    """
+    if len(url) == 0:
         print("Deleting Service or VM...   " + color.WARNING + "Service URL is not present!" + color.END)
+        return
     
-    else:
-        delete_url = url
-        delete_response = session.delete(delete_url)
-        if 'vms' in str(url):
-            print(f"VM succesfully deleted: {url} ")
+    try:
+        delete_response = session.delete(url)
+        delete_response.raise_for_status()  # Raise HTTPError for bad requests
+        if 'vms' in url:
+            print(f"VM successfully deleted: {url}")
         else:
-            print(f"Service succesfully deleted: {url} ")
+            print(f"Service successfully deleted: {url}")
         return delete_response
-    
+    except requests.exceptions.RequestException as e:
+        print(f"Error deleting {url}: {e}")
+        return None
 
-def update_description(url: str, desc: str):
+def update_description(url: str, desc: str, session: requests.Session) -> requests.Response:
+    """
+    Update the description using a POST request.
 
-    update_data = { "action": "edit",  
-                    "resource" : {"description" : f"{str(desc)}"}}
-    service_headers = { 'Content-Type': 'application/json'}
+    Parameters:
+    - url (str): The VM URL for the update.
+    - desc (str): The new description to be set.
+    - session (requests.Session): The pre-existing session object.
 
-    create_result = session.post(str(url), data=json.dumps(update_data), headers=service_headers)
+    Returns:
+    - requests.Response: The HTTP response object.
+    """
+    update_data = {"action": "edit", "resource": {"description": f"{desc}"}}
+    service_headers = {'Content-Type': 'application/json'}
 
-    return create_result
+    try:
+        create_result = session.post(url, data=json.dumps(update_data), headers=service_headers)
+        create_result.raise_for_status()  # Raise an HTTPError for bad responses
+        print(f"Update successful")
+        return create_result
+    except requests.exceptions.RequestException as e:
+        # Handle exceptions (e.g., connection errors, timeout)
+        print(f"Error updating description: {e}")
+        return None
 
-def assign_tag(url: str, vmtype: str, category: str = 'vmtype'):
+def assign_tag(url: str, vmtype: str, category: str = 'vmtype', session: requests.Session):
+    """
+    Assign a tag to a VM or service.
 
-    if 'location' in str(category).lower():
+    Parameters:
+    - url (str): The URL for the assignment.
+    - vmtype (str): The type of the VM or service.
+    - category (str): The category for the assignment (default is 'vmtype').
+    - session (requests.Session): The session object.
+
+    Returns:
+    - requests.Response: The HTTP response object.
+    """
+    # Constants
+    LOCATION_CATEGORIES = {'b7': 'b7', 'sm22': 'sm22', 'metro': 'metro'}
+    VM_TYPE_CATEGORIES = {'cloud': 'cloud', 'traditional': 'traditional'}
+
+    # Normalize category
+    category = str(category).lower()
+
+    if 'location' in category:
         category = 'location'
+        vmtype = LOCATION_CATEGORIES.get(str(vmtype).lower())
 
-        if 'b7' in str(vmtype).lower():
-            vmtype = "b7" 
-
-        elif 'sm22' in str(vmtype).lower():
-            vmtype = "sm22"
-
-        elif 'metro' in str(vmtype).lower():
-            vmtype = "metro"
-
-        else: 
+        if vmtype is None:
             print("VM Location is not found!!!")
             return 1
 
-    elif 'vmtype' in str(category).lower():
+    elif 'vmtype' in category:
         category = 'vmtype'
+        vmtype = VM_TYPE_CATEGORIES.get(str(vmtype).lower())
 
-        if 'cloud' in str(vmtype):
-            vmtype = "cloud" 
-
-        elif 'traditional' in str(vmtype):
-            vmtype = "traditional"
-
-        else: 
+        if vmtype is None:
             print("VM type is not found!!!")
             return 1
 
-    url = str(url)
+    # URL and data preparation
     url_tags = f"{url}/tags"
+    update_data = {"action": "assign", "resource": {"name": f"{vmtype}", "category": f"{category}"}}
+    service_headers = {'Content-Type': 'application/json'}
 
-    update_data = { "action": "assign",  
-                    "resource" : {
-                                "name":f"{vmtype}",
-                                "category": f"{category}"
-                                }}
-    service_headers = { 'Content-Type': 'application/json'}
+    # HTTP request
+    try:
+        assign_tag_response = session.post(url_tags, data=json.dumps(update_data), headers=service_headers)
+        assign_tag_response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"Error assigning tag: {e}")
+        return None
 
-
-    assign_tag = session.post(str(url_tags), data=json.dumps(update_data), headers=service_headers)
-
+    # Print information based on URL
     if "vms" in url:
-        print(f"VM assigned tag: " + color.BOLD + color.BLUE + vmtype.upper() + color.END + "!")
+        print(f"VM assigned tag: {color.BOLD}{color.BLUE}{vmtype.upper()}{color.END}!")
     elif "services" in url:
-        print(f"Service assigned tag: " + color.BOLD + color.BLUE + vmtype.upper() + color.END + "!")
+        print(f"Service assigned tag: {color.BOLD}{color.BLUE}{vmtype.upper()}{color.END}!")
     else:
-        print(f"Assigned tag to the object with url - "  + url + ": " + color.BOLD + color.BLUE + vmtype.upper() + color.END + "!")
+        print(f"Assigned tag to the object with url - {url}: {color.BOLD}{color.BLUE}{vmtype.upper()}{color.END}!")
 
+    return assign_tag_response
 
-    return assign_tag
+def get_vm_os(url: str, vm_name: str, session: requests.Session):
+    """
+    Get the operating system details for a VM.
 
-def get_vm_os(url: str, vm_name: str):
+    Parameters:
+    - url (str): The URL for the VM resource.
+    - vm_name (str): The name of the VM.
+    - session (requests.Session): The session object.
 
-    if url is None:
-        print(f"Url was not provided for VM with a name - {vm_name}!!!")
-        return 1
+    Returns:
+    - dict: Dictionary containing OS details.
+    """
+    # Parameter validation
+    if not url or not vm_name:
+        print("URL or VM name is not provided!!!")
+        return None
 
-    elif len(vm_name) == 0:
-        print(f"VM name is not provided!!!")
-        return 1
-
-    elif url == 1:
-        print(f"VM name is not provided!!!")
-        return 1
-
-    vm_resource_url = str(url)
+    vm_resource_url = url
 
     # Get tags for specified VM resource
     vm_os_url = f"{vm_resource_url}?expand=resources&attributes=operating_system"
 
-    os_response = session.get(vm_os_url)
+    try:
+        os_response = session.get(vm_os_url)
+        os_response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"Error getting VM OS: {e}")
+        return None
 
-    os_data = json.loads(os_response.text)
-    print(vm_name, "has OS " + color.BOLD + color.VIOLET + os_data['operating_system']['product_name'] +  color.END  + "!")
+    os_data = os_response.json()
+    
+    os_name = os_data['operating_system']['product_name']
+    
+    if os_name:
+        print(f"{vm_name} has OS {сolor.BOLD}{сolor.VIOLET}{os_name}{сolor.END}!")
+    else:
+        print(f"Operating system details not found for {vm_name}.")
 
-    return {"data": os_data, "os_details": os_data['operating_system'], "os_name": os_data['operating_system']['product_name'], "id": os_data['operating_system']['id']}
+    return {
+        "data": os_data, 
+        "os_details": os_data['operating_system'], 
+        "os_name": os_data['operating_system']['product_name'], 
+        "id": os_data['operating_system']['id']
+    }
 
+### Functions for update!!!
 def get_vm_url(name: str, state: str):
 
     # Get virtual machine object with specified name and state ON and archived(unknown)
