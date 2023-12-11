@@ -193,7 +193,7 @@ def get_vm_os(url: str, vm_name: str, session: requests.Session):
     }
 
 ### Functions for update!!!
-def get_vm_url(name: str, state: str):
+def get_vm_url(name: str, state: str = 'on'):
 
     # Get virtual machine object with specified name and state ON and archived(unknown)
     vm_name= str(name)
@@ -201,6 +201,16 @@ def get_vm_url(name: str, state: str):
     vm_url = ''
     if state.lower() == 'archived':
         vm_url = f"{api_url}/vms?filter[]=name='{vm_name}'&filter[]=power_state='unknown'"
+
+        # Checking uf the VM resource exists
+        vm_response = session.get(vm_url)
+        vm_data = json.loads(vm_response.text)
+        vm_len = len(vm_data["resources"])
+
+        if  vm_len == 0:
+            print("VM with state archived - Not found. Checking for VM name in lowercase form")
+            vm_name = vm_name.lower()
+            vm_url = f"{api_url}/vms?filter[]=name='{vm_name}'&filter[]=power_state='unknown'"
 
     elif state.lower() == 'on':
         vm_url = f"{api_url}/vms?filter[]=name='{vm_name}'&filter[]=power_state='on'"
@@ -211,8 +221,71 @@ def get_vm_url(name: str, state: str):
         vm_len = len(vm_data["resources"])
 
         if  vm_len == 0:
-            print("VM with state ON - Not found. Checking VM with state Off")
-            vm_url = f"{api_url}/vms?filter[]=name='{vm_name}'&filter[]=power_state='off'"
+
+            print("VM with state ON - Not found. Checking for VM name in lowercase form")
+
+            vm_url = f"{api_url}/vms?filter[]=name='{vm_name.lower()}'&filter[]=power_state='on'"
+
+            vm_response = session.get(vm_url)
+            vm_data = json.loads(vm_response.text)
+            vm_len = len(vm_data["resources"])
+
+            if vm_len == 0:
+
+                print("VM with state ON - Not found. Checking VM with state Off")
+                vm_url = f"{api_url}/vms?filter[]=name='{vm_name}'&filter[]=power_state='off'"
+
+                vm_response = session.get(vm_url)
+                vm_data = json.loads(vm_response.text)
+                vm_len = len(vm_data["resources"])
+
+                if vm_len == 0:
+                    print("VM with state OFF - Not found. Checking for VM name in lowercase form")
+                    vm_url = f"{api_url}/vms?filter[]=name='{vm_name.lower()}'&filter[]=power_state='off'"
+
+                    vm_response = session.get(vm_url)
+                    vm_data = json.loads(vm_response.text)
+                    vm_len = len(vm_data["resources"])
+
+                    if vm_len == 0:
+                         print("VM with state OFF - Not found. Checking for VM name in ANY case form")
+                         vms_url =  f"{api_url}/vms?expand=resources&attributes=name,power_state"
+
+                         vms_response = session.get(vms_url)
+                         vms_data = json.loads(vms_response.text)
+
+                         max_len =  float('inf')
+                         found_flag = False
+                         for i in vms_data['resources']:
+                             
+
+                             if str(vm_name).lower() in str(i['name']).lower():
+
+                            
+                                 vm_url = i['href']
+                                 resource_name = i['name']
+                                 vm_state = i['power_state']
+                                 print(f"VM with state {str(vm_state).upper()} with url " + color.BOLD + str(vm_url) + "  has name - " + color.BOLD + color.BLUE + str(resource_name) + color.END + " with SOME lower case letters used " + color.RED + "INCORRECTLY!" + color.END)
+                                
+                                 if len(vm_name) == len(resource_name):
+                                    
+                                    return vm_url, vms_data
+
+                                 elif (len(vm_name) < len(resource_name)) and (len(resource_name) < max_len):
+                                     max_len = len(resource_name)
+                                     result_url = vm_url
+                                     result_name = resource_name 
+                                     result_state = vm_state
+                                     found_flag = True
+
+                         if found_flag:
+
+                             print(f"Finally for VM " + color.BOLD + color.CYAN + str(vm_name) + color.END + f" with state {str(result_state).upper()} with url " + color.BOLD + str(result_url) + "  has name - " + color.BOLD + color.BLUE + str(result_name) + color.END)
+                             return result_url, vms_data 
+                         else:
+                            print(f"VM resource with name {vm_name} with state {state.upper()} doesn't exist!!!")
+                            return 1   
+                        
 
 
     else:
@@ -272,7 +345,7 @@ def get_vm_tags(url: str, vm_name: str):
         # Add tag key and value to the dictionary
         vm_tags[tag_list[0]] = tag_list[1]
 
-    
+    #print(vm_tags)
     for key, value in vm_tags.items():
 
         if key == 'vmtype':
@@ -291,14 +364,21 @@ def get_vm_tags(url: str, vm_name: str):
             print(key + " : " + value )
     
         
-    print("Descripion: " + color.BOLD + f"{tags_data['description']}\n" + color.END)
-
-    if 'vmtype' not in list(vm_tags.keys()):
+    print("Description: " + color.BOLD + f"{tags_data['description']}\n" + color.END)
     
-        print("vmtype - " + color.BOLD + color.YELLOW + "Not found!" + color.END)        
+    if 'vmtype' not in list(vm_tags.keys()):
+        print("vmtype - " + color.BOLD + color.YELLOW + "Not found!" + color.END)
+        vm_tags['vmtype'] = ''      
+    #print(f"Tags assigned to {vm_name}: {tags_data['tags']}")
 
-    return {"tags":tags_data['tags'], "data": tags_data, "desc": tags_data['description'], "vmtype": vm_tags['vmtype']}
+    
 
+    #pd_tags = pd.DataFrame.from_dict(tags_data['tags'])
+    #pd_tags.index.names = [f'{vm_name}']
+    #display(pd_tags[['id', 'name']])
+
+    return {"tags":vm_tags, "data": tags_data, "desc": tags_data['description'], "vmtype": vm_tags['vmtype']}
+    
 def get_service_url_tags(vm_resource_name: str):
     
     # Get service with name "VM - <vm_name>"
