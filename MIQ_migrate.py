@@ -192,7 +192,6 @@ def get_vm_os(url: str, vm_name: str, session: requests.Session):
         "id": os_data['operating_system']['id']
     }
 
-### Functions for update!!!
 def get_vm_url(name: str, state: str = 'on'):
 
     # Get virtual machine object with specified name and state ON and archived(unknown)
@@ -380,7 +379,7 @@ def get_vm_tags(url: str, vm_name: str):
     return {"tags":vm_tags, "data": tags_data, "desc": tags_data['description'], "vmtype": vm_tags['vmtype']}
     
 def get_service_url_tags(vm_resource_name: str):
-    
+
     # Get service with name "VM - <vm_name>"
     vm_name = str(vm_resource_name)
     service_name = f"VM - {vm_name}"
@@ -394,8 +393,13 @@ def get_service_url_tags(vm_resource_name: str):
         service_name = f"VM - {vm_name.upper()}"
 
         service_url = f"{api_url}/services?filter[]=name='{service_name}'"
+
         service_response = session.get(service_url)
         service_data = json.loads(service_response.text)
+
+        while len(service_data) <= 1:
+            service_response = session.get(service_url)
+            service_data = json.loads(service_response.text)
 
         if len(service_data["resources"]) > 0:
             subcount = int(service_data['subcount'])
@@ -411,8 +415,61 @@ def get_service_url_tags(vm_resource_name: str):
                 service_resource_url = service_data["resources"][0]['href']
         
         else:
-            print("Service with the name " + color.BOLD + color.BLUE + vm_name + color.WARNING + " Not Exists!" + color.END)
-            return {'url': "", 'tags': "", 'data': "" }
+            service_url = f"{api_url}/services?expand=resources&attributes=name&filter[]=name='*{vm_name}'"
+            service_response = session.get(service_url)
+            service_data = json.loads(service_response.text)
+
+            while len(service_data) <= 1:
+                service_response = session.get(service_url)
+                service_data = json.loads(service_response.text)
+                
+            if len(service_data["resources"]) == 0:
+
+                service_url = f"{api_url}/services?expand=resources&attributes=name"
+                service_response = session.get(service_url)
+                service_data = json.loads(service_response.text)
+                found = False
+                while len(service_data) <= 1:
+                    service_response = session.get(service_url)
+                    service_data = json.loads(service_response.text)
+
+                max_len =  float('inf')
+                found_flag = False
+                result_url = ''
+                result_name = ''
+                
+                for i in service_data['resources']:
+                     if str(i['name']).startswith('VM') and str(vm_name).lower() in str(i['name']).lower():
+
+                         service_resource_url = i['href']
+                         vm_resource_name = i['name']
+                         
+                         if len(service_name) == len(vm_resource_name):
+                            print("Service name with url " + color.BOLD + str(service_resource_url) + "  has name - " + color.BOLD + color.BLUE + str(vm_resource_name) + color.END + " with SOME lower case letters used " + color.RED + "INCORRECTLY!" + color.END)
+                            break
+
+                         elif (len(service_name) < len(vm_resource_name)) and (len(vm_resource_name) < max_len):
+                            max_len = len(vm_resource_name)
+                            result_url = service_resource_url
+                            result_name = vm_resource_name 
+                            found_flag = True
+
+                if found_flag:
+
+                     service_resource_url = result_url 
+                     vm_resource_name = result_name
+
+                     print("Service name with url " + color.BOLD + str(service_resource_url) + "  has name - " + color.BOLD + color.BLUE + str(vm_resource_name) + color.END + " with SOME lower case letters used " + color.RED + "INCORRECTLY!" + color.END)
+
+                elif not found_flag and (len(service_name) != len(vm_resource_name)):
+                     print("Service with the name " + color.BOLD + color.BLUE + vm_name + color.WARNING + " Not Exists!\n" + color.END)
+                     return {'url': "", 'tags': "", 'data': "" }
+
+            else:
+                service_resource_url = service_data["resources"][0]['href']
+                #print(service_data)
+                vm_resource_name = service_data["resources"][0]['name']
+                print("Service name " + color.BOLD + color.BLUE + str(vm_resource_name) + color.END + " extra whitespaces typed " + color.YELLOW + "INCORRECTLY!" + color.END)
 
     else:
         subcount = int(service_data['subcount']) 
@@ -425,20 +482,42 @@ def get_service_url_tags(vm_resource_name: str):
 
         else:            
             service_resource_url = service_data["resources"][0]['href']
-     
-    print(f" Service resource url for {vm_resource_name}: ", service_resource_url)
 
+    # FORMATTED OUTPUT  
+    #print("For VM name " + color.BOLD + color.BLUE + str(vm_name) + color.END + " Service resource name " + color.BOLD + color.CYAN + str(vm_resource_name) + color.END + " has url: ", service_resource_url)
+    print("For VM name " + str(vm_name) + f' - Service resource name "{service_name}"' + " has url: ", service_resource_url)
+    
     # Get tags for specified VM Service resource
     service_tags_url = f"{service_resource_url}?expand=tags"
     service_tags_response = session.get(service_tags_url)
     service_tags_data = json.loads(service_tags_response.text)
+    
+    #print(f"Tags assigned to {vm_name}: {service_tags_data['tags']}")
+    # Print list of tags assigned to the service
+    #for i in service_tags_data['tags']:
+    #    print(i['name'].replace('/managed/', ''))
 
     user_id = service_tags_data['evm_owner_id']
-    user_info = get_user(user_id)
-    print(color.BOLD + color.CYAN + user_info[0] + color.END)
-    print(user_info[1])
+    if len(user_id) > 0:
+        user_info = get_user(user_id)
+    else: 
+        print(color.BOLD + color.RED + "user_id contains empty value!!!\n" + color.END)
+
+    if user_info != None:
+        pass
+        #Print user name and email 
+        print(color.BOLD + color.CYAN + str(user_info[0]) + color.END)
+        print(user_info[1], "\n")
+    else:
+        print(color.BOLD + f"user_info for user_id {user_id} is " + color.RED + "NONE" + color.BLUE + "value!!!\n" + color.END)
+        return None
+    #print(str('\n'.join(user_info)))
+    #print("\n")
+    #print(f"User info: {', '.join(user_info)}\n")
+    #print(f"User info: {user_info}\n")
 
     return {'url': service_resource_url, 'tags': service_tags_data['tags'], 'data': service_tags_data, 'user': user_info}
+
 
 def get_user(user_id: str):
     
@@ -451,3 +530,7 @@ def get_user(user_id: str):
     user_name = [user_data.get(key) for key in ['name', 'email']]
     
     return user_name
+
+# QUOTA GET and UPDATE functions
+
+
