@@ -36,7 +36,7 @@ session.verify = False
 
 # Delete service using URL
 
-def delete_service(url: str, session: requests.Session):
+def delete_service(url: str, session: requests.Session = session):
     """
     Delete a service or VM based on the provided URL using the specified requests Session.
 
@@ -63,7 +63,7 @@ def delete_service(url: str, session: requests.Session):
         print(f"Error deleting {url}: {e}")
         return None
 
-def update_description(url: str, desc: str, session: requests.Session) -> requests.Response:
+def update_description(url: str, desc: str, session: requests.Session = session) -> requests.Response:
     """
     Update the description using a POST request.
 
@@ -88,7 +88,7 @@ def update_description(url: str, desc: str, session: requests.Session) -> reques
         print(f"Error updating description: {e}")
         return None
 
-def assign_tag(url: str, vmtype: str, category: str = 'vmtype', session: requests.Session):
+def assign_tag(url: str, vmtype: str, category: str = 'vmtype', session: requests.Session = session):
     """
     Assign a tag to a VM or service.
 
@@ -147,7 +147,7 @@ def assign_tag(url: str, vmtype: str, category: str = 'vmtype', session: request
 
     return assign_tag_response
 
-def get_vm_os(url: str, vm_name: str, session: requests.Session):
+def get_vm_os(url: str, vm_name: str, session: requests.Session = session):
     """
     Get the operating system details for a VM.
 
@@ -192,13 +192,58 @@ def get_vm_os(url: str, vm_name: str, session: requests.Session):
         "id": os_data['operating_system']['id']
     }
 
-def get_vm_url(name: str, state: str = 'on'):
+def get_vm_url(name: str, state: str = 'on', api_url: str = api_url, session: requests.Session = session):
+    """
+    Get the URL for a virtual machine based on its name and state.
 
+    Parameters:
+    - name (str): The name of the virtual machine.
+    - state (str): The state of the virtual machine ('on', 'off', 'archived').
+    - session (requests.Session): The session object.
+
+    Returns:
+    - str: The URL of the virtual machine.
+    """
+    # Parameter validation
+    if not name:
+        print("VM name is not provided!!!")
+        return None
+    
+    # Constants
+    STATES = {'on': 'on', 'off': 'off', 'archived': 'archived'}
+
+    # Normalize state
+    state = STATES.get(state.lower())
+    if state is None:
+        print("Unknown state for VM!")
+        return None
+        
     # Get virtual machine object with specified name and state ON and archived(unknown)
     vm_name= str(name)
-    print("VM name: " + color.BOLD + color.CYAN + vm_name + color.END)
     vm_url = ''
-    if state.lower() == 'archived':
+
+    # Define a list containing originally entered name and lower and upper case form
+    name_forms = [(vm_name, 'default'), (vm_name.lower(), 'lower'), (vm_name.upper(), upper)]
+    
+    if state == 'archived':
+        
+        for name, form in name_forms:
+            vm_url = f"{api_url}/vms?filter[]=name='{name}'&filter[]=power_state='unknown'"
+
+            # Checking uf the VM resource exists
+            vm_response = session.get(vm_url)
+            vm_data = json.loads(vm_response.text)
+            vm_len = len(vm_data["resources"])
+        
+            if vm_len > 0:
+                break  # Exit the loop if a matching resource is found
+        
+            print(f"VM with state archived - Not found after Checking for VM name {color.YELLOW}{name}{color.END} in {form.upper()} form")
+
+        if vm_len == 0:
+            print(f"VM resource with name {name} and state {state.upper()} doesn't exist!!!")
+            return None
+        
         vm_url = f"{api_url}/vms?filter[]=name='{vm_name}'&filter[]=power_state='unknown'"
 
         # Checking uf the VM resource exists
@@ -206,12 +251,8 @@ def get_vm_url(name: str, state: str = 'on'):
         vm_data = json.loads(vm_response.text)
         vm_len = len(vm_data["resources"])
 
-        if  vm_len == 0:
-            print("VM with state archived - Not found. Checking for VM name in lowercase form")
-            vm_name = vm_name.lower()
-            vm_url = f"{api_url}/vms?filter[]=name='{vm_name}'&filter[]=power_state='unknown'"
-
-    elif state.lower() == 'on':
+    elif state == 'on':
+        
         vm_url = f"{api_url}/vms?filter[]=name='{vm_name}'&filter[]=power_state='on'"
 
         # Checking if there is VMs with state ON. If not checking with state Off
@@ -220,7 +261,6 @@ def get_vm_url(name: str, state: str = 'on'):
         vm_len = len(vm_data["resources"])
 
         if  vm_len == 0:
-
             print("VM with state ON - Not found. Checking for VM name in lowercase form")
 
             vm_url = f"{api_url}/vms?filter[]=name='{vm_name.lower()}'&filter[]=power_state='on'"
@@ -257,9 +297,7 @@ def get_vm_url(name: str, state: str = 'on'):
                          found_flag = False
                          for i in vms_data['resources']:
                              
-
                              if str(vm_name).lower() in str(i['name']).lower():
-
                             
                                  vm_url = i['href']
                                  resource_name = i['name']
@@ -284,30 +322,16 @@ def get_vm_url(name: str, state: str = 'on'):
                          else:
                             print(f"VM resource with name {vm_name} with state {state.upper()} doesn't exist!!!")
                             return 1   
-                        
-
-
-    else:
-        print("Unknown state for VM!")
-
-    vm_response = session.get(vm_url)
-    vm_data = json.loads(vm_response.text)
-
-    vm_len = len(vm_data["resources"])
    
     if len(vm_data["resources"]) > 0:
         url = vm_data["resources"][0]['href']
         print(f" VM with state {state.upper()} resource url: ", url)
-
         return url, vm_data
 
     else:
-         
         print(f"VM resource with name {vm_name} with state {state.upper()} doesn't exist!!!")
         return 1
         
-
-
 def get_vm_tags(url: str, vm_name: str):
 
     # Get tags for VM object from its url
