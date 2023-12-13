@@ -3,6 +3,7 @@ import json
 import pandas as pd
 import urllib3
 from bs4 import BeautifulSoup
+from typing import Union
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class color:
@@ -223,11 +224,12 @@ def get_vm_url(name: str, state: str = 'on', api_url: str = api_url, session: re
     vm_url = ''
 
     # Define a list containing originally entered name and lower and upper case form
-    name_forms = [(vm_name, 'default'), (vm_name.lower(), 'lower'), (vm_name.upper(), upper)]
+    name_forms = [vm_name, vm_name.lower(), vm_name.upper()]
+    forms = ['lowercase', 'uppercase', 'placeholder']
     
     if state == 'archived':
         
-        for name, form in name_forms:
+        for name, form in zip(name_forms, forms):
             vm_url = f"{api_url}/vms?filter[]=name='{name}'&filter[]=power_state='unknown'"
 
             # Checking uf the VM resource exists
@@ -236,20 +238,15 @@ def get_vm_url(name: str, state: str = 'on', api_url: str = api_url, session: re
             vm_len = len(vm_data["resources"])
         
             if vm_len > 0:
+                vm_name = name
                 break  # Exit the loop if a matching resource is found
-        
-            print(f"VM with state archived - Not found after Checking for VM name {color.YELLOW}{name}{color.END} in {form.upper()} form")
+
+            if forms.index(form) < len(forms) - 1:
+                print(f"VM with state archived - Not found. Checking for VM name {color.YELLOW}{name}{color.END} in {form} form")
 
         if vm_len == 0:
             print(f"VM resource with name {name} and state {state.upper()} doesn't exist!!!")
             return None
-        
-        vm_url = f"{api_url}/vms?filter[]=name='{vm_name}'&filter[]=power_state='unknown'"
-
-        # Checking uf the VM resource exists
-        vm_response = session.get(vm_url)
-        vm_data = json.loads(vm_response.text)
-        vm_len = len(vm_data["resources"])
 
     elif state == 'on':
         
@@ -319,13 +316,15 @@ def get_vm_url(name: str, state: str = 'on', api_url: str = api_url, session: re
 
                              print(f"Finally for VM " + color.BOLD + color.CYAN + str(vm_name) + color.END + f" with state {str(result_state).upper()} with url " + color.BOLD + str(result_url) + "  has name - " + color.BOLD + color.BLUE + str(result_name) + color.END)
                              return result_url, vms_data 
+                             
                          else:
                             print(f"VM resource with name {vm_name} with state {state.upper()} doesn't exist!!!")
                             return 1   
    
     if len(vm_data["resources"]) > 0:
         url = vm_data["resources"][0]['href']
-        print(f" VM with state {state.upper()} resource url: ", url)
+        print(f"VM with state {state.upper()} with url " + color.BOLD + str(url) + "  has name - " + color.BOLD + color.BLUE + str(vm_name) + color.END)
+        #print(f" VM with state {state.upper()} resource url: ", url)
         return url, vm_data
 
     else:
@@ -556,5 +555,183 @@ def get_user(user_id: str):
     return user_name
 
 # QUOTA GET and UPDATE functions
+def update_quota(uri_dict, cpu=0, memory=0, storage=0):
+    result = []
+    flag = False
+    value_ = ''
+    for i in uri_dict:
+        if i == 'storage' and storage != 0:
+            value_gb = uri_dict[i]['storage_gb'] + float(storage)
+            print("Storage new value :", value_gb, "GB")
+            value_ = value_gb * (1024*1024*1024)
+            url = uri_dict[i]['storage_uri']
+            flag = True
 
+        elif i == 'memory' and memory != 0:
+            value_gb = uri_dict[i]['memory_gb'] + float(memory)
+            print("Memory new value :", value_gb, "GB")
+            value_ = value_gb * (1024*1024*1024)
+            url = uri_dict[i]['memory_uri']
+            flag = True
+        elif i == 'cpu' and cpu != 0:
+            value_ = int(uri_dict[i]['cpu_count']) + int(cpu)
+            print("CPU new value :", value_, "cores")
+
+            url = uri_dict[i]['cpu_uri']
+            flag = True
+
+        update_data = { "action": "edit",  
+                        "resource" : {
+                                    "value":f"{value_}"
+                                    }}
+    
+        if flag:
+            update_quota = session.post(str(url), data=json.dumps(update_data), headers=service_headers)
+            flag = False
+            result.append(update_quota)
+
+    return result
+
+def get_tenant_uri(ci_name: str, api_url: str = api_url, session=session):
+    # ci_name in format 'rsb_ci85262'
+    tenant_url = f"{api_url}/tenants?expand=resources&attributes=name&filter[]=name={str(ci_name)}"
+    #tenant_url = f"https://manageiqr00.gts.rus.socgen/api/tenants?expand=resources&attributes=name&filter[]=name={str(ci_name)}"
+
+    tenant_response = session.get(tenant_url)
+    tenant_data = json.loads(tenant_response.text)
+    uri = tenant_data['resources'][0]['href']
+    print(f"Tenant uri: {color.CYAN}{uri}{color.END}")
+
+    return uri
+
+def get_tenant_quota(tenant_uri: str, session=session):
+    # ci_name in format 'rsb_ci85262'
+    quota_url = f"{str(tenant_uri)}/quotas?expand=resources&attributes=name,value,unit,used,available,total"
+
+    quota_response = session.get(quota_url)
+    quota_data = json.loads(quota_response.text)
+
+    for q in quota_data['resources']:
+        if q['name'] == 'storage_allocated':
+            storage = float(q['value'])/(1024*1024*1024)
+            storage_uri = q['href']
+            storage_used = float(q['used'])/(1024*1024*1024)
+            storage_avail = float(q['available'])/(1024*1024*1024)
+            print(f"Storage total quota:\t {color.BLUE}{storage}{color.END} GB;\tUsed: {color.YELLOW}{storage_used}{color.END} GB;\tAvailable: {color.GREEN}{storage_avail}{color.END} GB")
+
+        elif q['name'] == 'mem_allocated':
+            memory = float(q['value'])/(1024*1024*1024)
+            memory_uri = q['href']
+            memory_used = float(q['used'])/(1024*1024*1024)
+            memory_avail = float(q['available'])/(1024*1024*1024)
+            print(f"Memory total quota:\t {color.BLUE}{memory}{color.END} GB;\tUsed: {color.YELLOW}{memory_used}{color.END} GB;\t\tAvailable: {color.GREEN}{memory_avail}{color.END} GB")
+
+
+        elif q['name'] == 'cpu_allocated':
+            cpu = int(q['value'])
+            cpu_uri = q['href']
+            cpu_used = q['used']
+            cpu_avail = q['available']
+            print(f"CPU total quota:\t {color.BLUE}{cpu}{color.END};\t\tUsed: {color.YELLOW}{cpu_used}{color.END};\t\tAvailable: {color.GREEN}{cpu_avail}{color.END}")
+
+    return {'storage': {'name': 'storage_allocated', 'storage_gb': storage, 'storage_uri': storage_uri}, 'memory': {'name': 'mem_allocated', 'memory_gb': memory, 'memory_uri': memory_uri}, 'cpu':  {'name': 'cpu_allocated', 'cpu_count': cpu, 'cpu_uri': cpu_uri}}
+
+def get_vm_os(url: str, session = session):
+
+    if url is None:
+        print("Url was not provided for VM !!!")
+        return 1
+
+    elif url == 1:
+        print("Url was not provided for VM !!!")
+        return 1
+
+    vm_resource_url = str(url)
+    #print("Extracting OS for VM resource url: ", vm_resource_url)
+
+    # Get tags for specified VM resource
+    vm_os_url = f"{vm_resource_url}?expand=resources&attributes=operating_system"
+
+    os_response = session.get(vm_os_url)
+
+    os_data = json.loads(os_response.text)
+    vm_name = os_data['name']
+    print(vm_name, "has OS " + color.BOLD + color.VIOLET + os_data['operating_system']['product_name'] +  color.END  + "!")
+
+    return {"data": os_data, "os_details": os_data['operating_system'], "os_name": os_data['operating_system']['product_name'], "id": os_data['operating_system']['id']}
+
+# Checking if service attached to VM and updating attached service name
+
+def get_vm_service(url: str,  session = session):
+    """
+    Get a service attached to the VM based on the provided URL using the specified requests Session.
+
+    Args:
+        url (str): The URL of the VM.
+        session (requests.Session): An existing requests Session object for making HTTP requests.
+
+    Returns:
+    - dict: Dictionary containing details of service attached to the specified VM
+    """
+
+    vm_name = ''
+
+    if url is None:
+        print(f"Url was not provided for VM with a name - {vm_name}!!!")
+        return 1
+
+    elif url == 1:
+        print(f"URL is not provided!!!")
+        return 1
+    
+    elif len(url) == 0:
+        print(f"URL is not provided!!!")
+        return 1
+
+    vm_resource_url = str(url)
+    #print("Extracting OS for VM resource url: ", vm_resource_url)
+
+    # Get tags for specified VM resource
+    vm_svc_url = f"{vm_resource_url}?expand=resources&attributes=service"
+
+    svc_response = session.get(vm_svc_url)
+
+    svc_data = json.loads(svc_response.text)
+
+    vm_name = str(svc_data['name'])
+    if svc_data['service'] == None:
+        print(vm_name, "has " + color.BOLD + color.RED + "NO SERVICE ATTACHED" +  color.END  + "!")
+        return 1
+
+    else:
+        print(color.BOLD + color.GREEN + vm_name + color.END, "has service attached with the name:  " + color.BOLD + color.VIOLET + svc_data['service']['name'] +  color.END  + "!")
+
+    return {"data": svc_data, "svc_details": svc_data['service'], "svc_name": svc_data['service']['name'], "id": svc_data['service']['id'], 'vm_name': vm_name}
+
+def update_service_name(service_id: Union[int, str], vm_name: str, api_url: str = 'https://manageiqr00.gts.rus.socgen/api'):
+
+    service_headers = { 'Content-Type': 'application/json'}
+
+    service_url = f"{api_url}/services/{str(service_id)}"
+
+    new_name = f"VM - {str(vm_name).upper()}"
+    update_data = { "action": "edit",  
+                    "resource" : {"name" : new_name}}
+    service_headers = { 'Content-Type': 'application/json'}
+    
+    try:
+        print("Renaming service to " + color.BOLD + color.BLUE + str(new_name) + color.END)
+        resp = session.post(str(service_url), data=json.dumps(update_data), headers=service_headers)
+        resp.raise_for_status()
+        return resp
+    
+    except requests.HTTPError as ex:
+        # possibly check response for a message
+        status_code = ex.response.status_code
+        print("Status code: ", status_code)
+        raise ex  
+        
+    except requests.Timeout:
+        print("Request got timeout on server!")
+        return None
 
