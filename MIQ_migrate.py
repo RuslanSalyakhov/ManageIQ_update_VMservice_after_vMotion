@@ -615,8 +615,8 @@ def get_tenant_quota(tenant_uri: str, session=session):
         if q['name'] == 'storage_allocated':
             storage = float(q['value'])/(1024*1024*1024)
             storage_uri = q['href']
-            storage_used = float(q['used'])/(1024*1024*1024)
-            storage_avail = float(q['available'])/(1024*1024*1024)
+            storage_used = round(float(q['used'])/(1024*1024*1024), 3)
+            storage_avail = round(float(q['available'])/(1024*1024*1024), 3)
             print(f"Storage total quota:\t {color.BLUE}{storage}{color.END} GB;\tUsed: {color.YELLOW}{storage_used}{color.END} GB;\tAvailable: {color.GREEN}{storage_avail}{color.END} GB")
 
         elif q['name'] == 'mem_allocated':
