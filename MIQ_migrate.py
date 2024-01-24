@@ -331,27 +331,36 @@ def get_vm_url(name: str, state: str = 'on', api_url: str = api_url, session: re
         print(f"VM resource with name {vm_name} with state {state.upper()} doesn't exist!!!")
         return 1
         
-def get_vm_tags(url: str, vm_name: str):
+def get_vm_tags(url: str, vm_name: str, session: requests.Session = session) -> Dict[str, Union[Dict[str, str], Dict[str, str], str, str]]:
+    """
+    Get tags for a VM object from its URL.
+
+    Parameters:
+    - url (str): URL of the VM resource.
+    - vm_name (str): Name of the VM.
+    - session: Requests session object.
+
+    Returns:
+    - Dict[str, Union[Dict[str, str], Dict[str, str], str, str]]: Dictionary containing tags, data, description, and vmtype.
+    """
 
     # Get tags for VM object from its url
 
-    if url is None:
-        print(f"Url was not provided for VM with a name - {vm_name}!!!")
-        return 1
-
-    elif len(vm_name) == 0:
-        print(f"VM name is not provided!!!")
-        return 1
-
-    elif url == 1:
-        print(f"VM name is not provided!!!")
-        return 1
+    if url is None or url == 1:
+        raise ValueError(f"Invalid url input for VM!!!")
 
     vm_resource_url = str(url)
     print("Extracting tags for VM resource url: ", vm_resource_url)
 
     # Get tags for specified VM resource
     vm_tags_url = f"{vm_resource_url}?expand=tags"
+
+#ЗДЕСЬ НУЖНО ОБНОВИТЬ ССЫЛКУ ЧТОБЫ ЧЕРЕЗ НЕ ТАКЖЕ ПОЛУЧИТЬ ИМЯ МАШИНЫ!!!
+    # Get tags for specified VM resource
+    vm_os_url = f"{vm_resource_url}?expand=resources&attributes=operating_system"
+    os_response = session.get(vm_os_url)
+    os_data = json.loads(os_response.text)
+    vm_name = os_data['name']
     
 
     tags_response = session.get(vm_tags_url)
