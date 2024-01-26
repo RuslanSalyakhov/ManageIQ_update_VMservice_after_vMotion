@@ -331,7 +331,7 @@ def get_vm_url(name: str, state: str = 'on', api_url: str = api_url, session: re
         print(f"VM resource with name {vm_name} with state {state.upper()} doesn't exist!!!")
         return 1
         
-def get_vm_tags(url: str, vm_name: str, session: requests.Session = session) -> Dict[str, Union[Dict[str, str], Dict[str, str], str, str]]:
+def get_vm_tags(url: str, session: requests.Session = session) -> Dict[str, Union[Dict[str, str], Dict[str, str], str, str]]:
     """
     Get tags for a VM object from its URL.
 
@@ -353,19 +353,12 @@ def get_vm_tags(url: str, vm_name: str, session: requests.Session = session) -> 
     print("Extracting tags for VM resource url: ", vm_resource_url)
 
     # Get tags for specified VM resource
-    vm_tags_url = f"{vm_resource_url}?expand=tags"
-
-#ЗДЕСЬ НУЖНО ОБНОВИТЬ ССЫЛКУ ЧТОБЫ ЧЕРЕЗ НЕ ТАКЖЕ ПОЛУЧИТЬ ИМЯ МАШИНЫ!!!
-    # Get tags for specified VM resource
-    vm_os_url = f"{vm_resource_url}?expand=resources&attributes=operating_system"
-    os_response = session.get(vm_os_url)
-    os_data = json.loads(os_response.text)
-    vm_name = os_data['name']
-    
-
+    vm_tags_url = f"{vm_resource_url}?expand=resources&attributes=tags"    
     tags_response = session.get(vm_tags_url)
 
     tags_data = json.loads(tags_response.text)
+    vm_name = tags_data['name']
+    print(f"VM name: {color.BOLD}{color.BEIGE}{vm_name}{color.END}")
 
     # Initialize dict to keep vm tags info
     vm_tags = {}
@@ -399,11 +392,9 @@ def get_vm_tags(url: str, vm_name: str, session: requests.Session = session) -> 
     
     if 'vmtype' not in list(vm_tags.keys()):
         print("vmtype - " + color.BOLD + color.YELLOW + "Not found!" + color.END)
-        vm_tags['vmtype'] = ''      
+        vm_tags['vmtype'] = ''  
+        
     #print(f"Tags assigned to {vm_name}: {tags_data['tags']}")
-
-    
-
     #pd_tags = pd.DataFrame.from_dict(tags_data['tags'])
     #pd_tags.index.names = [f'{vm_name}']
     #display(pd_tags[['id', 'name']])
