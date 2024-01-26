@@ -222,6 +222,7 @@ def get_vm_url(name: str, state: str = 'on', api_url: str = api_url, session: re
     # Get virtual machine object with specified name and state ON and archived(unknown)
     vm_name= str(name)
     vm_url = ''
+    arch_url = ''
 
     # Define a list containing originally entered name and lower and upper case form
     name_forms = [vm_name, vm_name.lower(), vm_name.upper()]
@@ -237,9 +238,50 @@ def get_vm_url(name: str, state: str = 'on', api_url: str = api_url, session: re
             vm_data = json.loads(vm_response.text)
             vm_len = len(vm_data["resources"])
         
+
             if vm_len > 0:
                 vm_name = name
-                break  # Exit the loop if a matching resource is found
+
+                subcount = int(vm_data['subcount']) 
+                if subcount > 1:
+                    print(color.BOLD + color.RED + "There are " + str(subcount) + " ARCHIVED VMs with the same name " + color.BLUE + vm_name + color.END + "!")
+
+                    for i in range(0, subcount):
+                
+                        vm_arch_url = vm_data["resources"][i]['href']
+                        vm_svc_url = f"{vm_arch_url}?expand=resources&attributes=service"
+
+                        svc_response = session.get(vm_svc_url)
+                        svc_data = json.loads(svc_response.text)
+                        vm_name = str(svc_data['name'])
+
+                        if svc_data['service'] == None:
+                            print(vm_name, "with url: " + color.BLUE + str(vm_arch_url) + color.END + " has "+ color.BOLD + color.RED + "NO SERVICE ATTACHED" +  color.END  + "!")
+                            
+                        else: 
+                            print(color.BOLD + color.GREEN + vm_name + color.END, "with url: " + color.BLUE + str(vm_arch_url) + color.END, "has service attached with the name:  " + color.BOLD + color.VIOLET + svc_data['service']['name'] +  color.END  + "!")
+                            arch_url = vm_arch_url
+                            break  # Exit the loop if a matching resource is found
+                    
+                    break
+
+                else:
+                    vm_arch_url = vm_data["resources"][0]['href']
+                    vm_svc_url = f"{vm_arch_url}?expand=resources&attributes=service"
+
+                    svc_response = session.get(vm_svc_url)
+
+                    svc_data = json.loads(svc_response.text)
+
+                    vm_name = str(svc_data['name'])
+
+                    if svc_data['service'] == None:
+                        print(vm_name, "has " + color.BOLD + color.RED + "NO SERVICE ATTACHED" +  color.END  + "!")
+                        break
+
+                    else: 
+                        print(color.BOLD + color.GREEN + vm_name + color.END, "has service attached with the name:  " + color.BOLD + color.VIOLET + svc_data['service']['name'] +  color.END  + "!")
+                        break  # Exit the loop if a matching resource is found
 
             if forms.index(form) < len(forms) - 1:
                 print(f"VM with state archived - Not found. Checking for VM name {color.YELLOW}{name}{color.END} in {form} form")
@@ -322,7 +364,12 @@ def get_vm_url(name: str, state: str = 'on', api_url: str = api_url, session: re
                             return 1   
    
     if len(vm_data["resources"]) > 0:
-        url = vm_data["resources"][0]['href']
+
+        if len(arch_url) > 0:
+            url = arch_url
+        else:
+            url = vm_data["resources"][0]['href']
+
         print(f"VM with state {state.upper()} with url " + color.BOLD + str(url) + "  has name - " + color.BOLD + color.BLUE + str(vm_name) + color.END)
         #print(f" VM with state {state.upper()} resource url: ", url)
         return url, vm_data
