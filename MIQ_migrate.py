@@ -392,7 +392,6 @@ def get_vm_tags(url: str, session: requests.Session = session) -> Dict[str, Unio
     """
 
     # Get tags for VM object from its url
-
     if url is None or url == 1:
         raise ValueError(f"Invalid url input for VM!!!")
 
@@ -409,16 +408,15 @@ def get_vm_tags(url: str, session: requests.Session = session) -> Dict[str, Unio
 
     # Initialize dict to keep vm tags info
     vm_tags = {}
+    
     for i in tags_data['tags']:
-        tag_list = []
+        #tag_list = []
         # Convert tags separated by / to the list
         tag_list = i['name'].replace("/managed/", '').split("/")
         # Add tag key and value to the dictionary
         vm_tags[tag_list[0]] = tag_list[1]
 
-    #print(vm_tags)
     for key, value in vm_tags.items():
-
         if key == 'vmtype':
             print(key  + " : " + color.GREEN + color.BOLD + value + color.END)
         elif key == 'business_group_id':
@@ -434,17 +432,12 @@ def get_vm_tags(url: str, session: requests.Session = session) -> Dict[str, Unio
         else:
             print(key + " : " + value )
     
-        
     print("Description: " + color.BOLD + f"{tags_data['description']}\n" + color.END)
     
-    if 'vmtype' not in list(vm_tags.keys()):
+    #if 'vmtype' not in list(vm_tags.keys()):
+    if 'vmtype' not in vm_tags:
         print("vmtype - " + color.BOLD + color.YELLOW + "Not found!" + color.END)
         vm_tags['vmtype'] = ''  
-        
-    #print(f"Tags assigned to {vm_name}: {tags_data['tags']}")
-    #pd_tags = pd.DataFrame.from_dict(tags_data['tags'])
-    #pd_tags.index.names = [f'{vm_name}']
-    #display(pd_tags[['id', 'name']])
 
     return {"tags":vm_tags, "data": tags_data, "desc": tags_data['description'], "vmtype": vm_tags['vmtype']}
 
