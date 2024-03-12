@@ -406,7 +406,7 @@ def get_vm_url(name: str, state: str = 'on', api_url: str = api_url, session: re
 
         print(f"VM with state {state.upper()} with url " + color.BOLD + str(url) + "  has name - " + color.BOLD + color.BLUE + str(vm_name) + color.END)
         #print(f" VM with state {state.upper()} resource url: ", url)
-        return url, vm_data
+        return url, vm_data, url_no_svc
 
     else:
         print(f"VM resource with name {vm_name} with state {state.upper()} doesn't exist!!!")
