@@ -223,6 +223,7 @@ def get_vm_url(name: str, state: str = 'on', api_url: str = api_url, session: re
     vm_name= str(name)
     vm_url = ''
     arch_url = ''
+    on_url = ''
 
     # Define a list containing originally entered name and lower and upper case form
     name_forms = [vm_name, vm_name.lower(), vm_name.upper()]
@@ -362,11 +363,41 @@ def get_vm_url(name: str, state: str = 'on', api_url: str = api_url, session: re
                          else:
                             print(f"VM resource with name {vm_name} with state {state.upper()} doesn't exist!!!")
                             return 1   
-   
+    if state == 'on':
+        subcount = int(vm_data['subcount']) 
+        if subcount > 1:
+            print(color.BOLD + color.RED + "There are " + str(subcount) + " ON VMs with the same name " + color.BLUE + vm_name + color.END + "!")
+
+            for i in range(0, subcount):
+        
+                vm_on_url = vm_data["resources"][i]['href']
+                vm_svc_url = f"{vm_on_url}?expand=resources&attributes=service"
+
+                svc_response = session.get(vm_svc_url)
+                svc_data = json.loads(svc_response.text)
+                vm_name = str(svc_data['name'])
+
+                if svc_data['service'] == None:
+                    print(vm_name, "with url: " + color.BLUE + str(vm_on_url) + color.END + " has "+ color.BOLD + color.RED + "NO SERVICE ATTACHED" +  color.END  + "!")
+                    
+                else: 
+                    print(color.BOLD + color.GREEN + vm_name + color.END, "with url: " + color.BLUE + str(vm_on_url) + color.END, "has service attached with the name:  " + color.BOLD + color.VIOLET + svc_data['service']['name'] +  color.END  + "!")
+                    on_url = vm_on_url
+                    break  # Exit the loop if a matching resource is found
+                    
+
+        
     if len(vm_data["resources"]) > 0:
 
         if len(arch_url) > 0:
+            # URL for VM with state Off or Archived with attached service
+            print(f"URL for VM with state Off or Archived with attached service: {color.BLUE}{arch_url}{color.END}")
             url = arch_url
+            
+        elif len(on_url) > 0:
+            print(f"URL for VM with state ON with attached service: {color.BLUE}{arch_url}{color.END}")
+            url = arch_on
+        
         else:
             url = vm_data["resources"][0]['href']
 
