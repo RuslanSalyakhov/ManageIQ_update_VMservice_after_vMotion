@@ -224,6 +224,7 @@ def get_vm_url(name: str, state: str = 'on', api_url: str = api_url, session: re
     vm_url = ''
     arch_url = ''
     on_url = ''
+    url_no_svc = []
 
     # Define a list containing originally entered name and lower and upper case form
     name_forms = [vm_name, vm_name.lower(), vm_name.upper()]
@@ -258,11 +259,12 @@ def get_vm_url(name: str, state: str = 'on', api_url: str = api_url, session: re
 
                         if svc_data['service'] == None:
                             print(vm_name, "with url: " + color.BLUE + str(vm_arch_url) + color.END + " has "+ color.BOLD + color.RED + "NO SERVICE ATTACHED" +  color.END  + "!")
+                            url_no_svc.append(vm_arch_url)
                             
                         else: 
                             print(color.BOLD + color.GREEN + vm_name + color.END, "with url: " + color.BLUE + str(vm_arch_url) + color.END, "has service attached with the name:  " + color.BOLD + color.VIOLET + svc_data['service']['name'] +  color.END  + "!")
                             arch_url = vm_arch_url
-                            break  # Exit the loop if a matching resource is found
+                            # Exit the loop if a matching resource is found
                     
                     break
 
@@ -379,11 +381,12 @@ def get_vm_url(name: str, state: str = 'on', api_url: str = api_url, session: re
 
                 if svc_data['service'] == None:
                     print(vm_name, "with url: " + color.BLUE + str(vm_on_url) + color.END + " has "+ color.BOLD + color.RED + "NO SERVICE ATTACHED" +  color.END  + "!")
+                    url_no_svc.append(vm_on_url)
                     
                 else: 
                     print(color.BOLD + color.GREEN + vm_name + color.END, "with url: " + color.BLUE + str(vm_on_url) + color.END, "has service attached with the name:  " + color.BOLD + color.VIOLET + svc_data['service']['name'] +  color.END  + "!")
                     on_url = vm_on_url
-                    break  # Exit the loop if a matching resource is found
+                    # Exit the loop if a matching resource is found
                     
 
         
