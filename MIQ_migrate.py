@@ -200,6 +200,7 @@ def get_vm_url(name: str, state: str = 'on', api_url: str = api_url, session: re
     Parameters:
     - name (str): The name of the virtual machine.
     - state (str): The state of the virtual machine ('on', 'off', 'archived').
+    - api_url(str): The api endpoint url in in the format 'https://manageiq.test.com/api'
     - session (requests.Session): The session object.
 
     Returns:
@@ -475,8 +476,19 @@ def get_vm_tags(url: str, session: requests.Session = session) -> Dict[str, Unio
 
     return {"tags":vm_tags, "data": tags_data, "desc": tags_data['description'], "vmtype": vm_tags['vmtype']}
     
-def get_service_url_tags(vm_resource_name: str, session: requests.Session = session):
+def get_service_url_tags(vm_resource_name: str, api_url: str = api_url, session: requests.Session = session):
+    """
+    Get tags for a VM object from its name.
 
+    Parameters:
+    - vm_resource_name (str): VM resource name.
+    - api_url(str): The api endpoint url in in the format 'https://manageiq.test.com/api'
+    - session: Requests session object.
+
+    Returns:
+    - Dict: Dictionary containing url, tags, data, and user_info.
+    """
+    
     # Get service with name "VM - <vm_name>"
     vm_name = str(vm_resource_name)
     service_name = f"VM - {vm_name}"
@@ -608,15 +620,24 @@ def get_service_url_tags(vm_resource_name: str, session: requests.Session = sess
     else:
         print(color.BOLD + f"user_info for user_id {user_id} is " + color.RED + "NONE" + color.BLUE + "value!!!\n" + color.END)
         return None
-    #print(str('\n'.join(user_info)))
-    #print("\n")
-    #print(f"User info: {', '.join(user_info)}\n")
-    #print(f"User info: {user_info}\n")
 
     return {'url': service_resource_url, 'tags': service_tags_data['tags'], 'data': service_tags_data, 'user': user_info}
 
 
-def get_user(user_id: str):
+def get_user(user_id: str, api_url: str = api_url, session: requests.Session = session):
+    
+    """
+    Fetches user information from an API endpoint given a user ID.
+
+    Args:
+    - user_id (str): The ID of the user whose information is to be retrieved.
+    - api_url (str): The base URL of the API where user information is available.
+    - session (requests.Session, optional): A requests session object. If not provided, a new session will be created.
+
+    Returns:
+    - user_name (list): A list containing the name and email address of the user, extracted from the API response.
+                       If the user information cannot be retrieved, returns an empty list.
+    """
     
     # Get user information by id
     user_id = str(user_id)
