@@ -474,50 +474,8 @@ def get_vm_tags(url: str, session: requests.Session = session) -> Dict[str, Unio
         vm_tags['vmtype'] = ''  
 
     return {"tags":vm_tags, "data": tags_data, "desc": tags_data['description'], "vmtype": vm_tags['vmtype']}
-
-# ПРИМЕР КОДА С КОММЕНТАРИЯМИ ОТ GPT
-def get_vm_tags(session, url: str, vm_name: str) -> Dict[str, Union[Dict[str, str], Dict[str, str], str, str]]:
-    """
-    Get tags for a VM object from its URL.
-
-    Parameters:
-    - session: Requests session object.
-    - url (str): URL of the VM resource.
-    - vm_name (str): Name of the VM.
-
-    Returns:
-    - Dict[str, Union[Dict[str, str], Dict[str, str], str, str]]: Dictionary containing tags, data, description, and vmtype.
-    """
-
-    if url is None or len(vm_name) == 0 or url == 1:
-        raise ValueError(f"Invalid input for VM with name - {vm_name}!!!")
-
-    vm_resource_url = str(url)
-    print("Extracting tags for VM resource url: ", vm_resource_url)
-
-    vm_tags_url = f"{vm_resource_url}?expand=tags"
-    tags_response = session.get(vm_tags_url)
-    tags_data = json.loads(tags_response.text)
-
-    vm_tags = {}
-
-    for i in tags_data['tags']:
-        tag_list = i['name'].replace("/managed/", '').split("/")
-        vm_tags[tag_list[0]] = tag_list[1]
-
-    for key, value in vm_tags.items():
-        print(format_key_value(key, value))
-
-    print(f"Description: {tags_data['description']}\n")
-
-    if 'vmtype' not in vm_tags:
-        print("vmtype - Not found!")
-        vm_tags['vmtype'] = ''
-
-    return {"tags": vm_tags, "data": tags_data, "desc": tags_data['description'], "vmtype": vm_tags.get('vmtype', '')}
-
     
-def get_service_url_tags(vm_resource_name: str):
+def get_service_url_tags(vm_resource_name: str, session: requests.Session = session):
 
     # Get service with name "VM - <vm_name>"
     vm_name = str(vm_resource_name)
