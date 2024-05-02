@@ -650,7 +650,7 @@ def get_user(user_id: str, api_url: str = api_url, session: requests.Session = s
     return user_name
 
 # QUOTA GET and UPDATE functions
-def update_quota(uri_dict, cpu=0, memory=0, storage=0):
+def update_quota(uri_dict, cpu=0, memory=0, storage=0, session: requests.Session = session):
     result = []
     flag = False
     value_ = ''
@@ -675,6 +675,7 @@ def update_quota(uri_dict, cpu=0, memory=0, storage=0):
             url = uri_dict[i]['cpu_uri']
             flag = True
 
+        service_headers = { 'Content-Type': 'application/json'}
         update_data = { "action": "edit",  
                         "resource" : {
                                     "value":f"{value_}"
@@ -712,14 +713,14 @@ def get_tenant_quota(tenant_uri: str, session=session):
             storage_uri = q['href']
             storage_used = round(float(q['used'])/(1024*1024*1024), 3)
             storage_avail = round(float(q['available'])/(1024*1024*1024), 3)
-            print(f"Storage total quota:\t {color.BLUE}{storage}{color.END} GB;\tUsed: {color.YELLOW}{storage_used}{color.END} GB;\tAvailable: {color.GREEN}{storage_avail}{color.END} GB")
+            print(f"Storage total quota:\t {color.BLUE}{str(storage) + ' GB;': <12}{color.END} {'Used:'} {color.YELLOW}{str(storage_used) + ' GB;': >13} {color.END} {'Available:': >12} {color.GREEN}{storage_avail}{color.END} GB")
 
         elif q['name'] == 'mem_allocated':
             memory = float(q['value'])/(1024*1024*1024)
             memory_uri = q['href']
             memory_used = float(q['used'])/(1024*1024*1024)
             memory_avail = float(q['available'])/(1024*1024*1024)
-            print(f"Memory total quota:\t {color.BLUE}{memory}{color.END} GB;\tUsed: {color.YELLOW}{memory_used}{color.END} GB;\t\tAvailable: {color.GREEN}{memory_avail}{color.END} GB")
+            print(f"Memory total quota:\t {color.BLUE}{str(memory) + ' GB;': <12}{color.END} {'Used:'} {color.YELLOW}{str(memory_used) + ' GB;': >13} {color.END} {'Available:': >12} {color.GREEN}{memory_avail}{color.END} GB")
 
 
         elif q['name'] == 'cpu_allocated':
@@ -727,7 +728,8 @@ def get_tenant_quota(tenant_uri: str, session=session):
             cpu_uri = q['href']
             cpu_used = q['used']
             cpu_avail = q['available']
-            print(f"CPU total quota:\t {color.BLUE}{cpu}{color.END};\t\tUsed: {color.YELLOW}{cpu_used}{color.END};\t\tAvailable: {color.GREEN}{cpu_avail}{color.END}")
+            print(f"CPU total quota:\t {color.BLUE}{str(cpu) + ';': <12}{color.END} {'Used:'} {color.YELLOW}{str(cpu_used) + ';': >13} {color.END} {'Available:': >12} {color.GREEN}{cpu_avail}{color.END}")
+
 
     return {'storage': {'name': 'storage_allocated', 'storage_gb': storage, 'storage_uri': storage_uri}, 'memory': {'name': 'mem_allocated', 'memory_gb': memory, 'memory_uri': memory_uri}, 'cpu':  {'name': 'cpu_allocated', 'cpu_count': cpu, 'cpu_uri': cpu_uri}}
 
