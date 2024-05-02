@@ -394,8 +394,8 @@ def get_vm_url(name: str, state: str = 'on', api_url: str = api_url, session: re
     if len(vm_data["resources"]) > 0:
 
         if len(arch_url) > 0:
-            # URL for VM with state Off or Archived with attached service
-            print(f"URL for VM with state Off or Archived with attached service: {color.BLUE}{arch_url}{color.END}")
+            # URL for VM with Archived with attached service
+            print(f"URL for VM with Archived with attached service: {color.BLUE}{arch_url}{color.END}")
             url = arch_url
             
         elif len(on_url) > 0:
