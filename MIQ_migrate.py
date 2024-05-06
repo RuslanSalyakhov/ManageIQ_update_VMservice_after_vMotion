@@ -660,7 +660,7 @@ def update_quota(uri_dict, cpu=0, memory=0, storage=0, session: requests.Session
         cpu (int): The amount of CPU cores to be added.
         memory (int): The amount of memory (in GB) to be added.
         storage (int): The amount of storage (in GB) to be added.
-        session (requests.Session): Optional parameter for passing a requests Session object.
+        session (requests.Session): Default parameter for passing a requests Session object.
 
     Returns:
         list: A list of responses from the POST requests made during quota updates.
@@ -710,7 +710,7 @@ def get_tenant_uri(ci_name: str, api_url: str = api_url, session: requests.Sessi
     Args:
         ci_name (str): The name of the CI in format 'rsb_ci85262'.
         api_url (str): The base URL of the API.
-        session (requests.Session): Optional parameter for passing a requests Session object.
+        session (requests.Session): Default parameter for passing a requests Session object.
 
     Returns:
         str: The URI of the tenant.
@@ -730,7 +730,7 @@ def get_tenant_uri(ci_name: str, api_url: str = api_url, session: requests.Sessi
 
     return uri
 
-def get_tenant_quota(tenant_uri: str, session: requests.Session):
+def get_tenant_quota(tenant_uri: str, session: requests.Session = session):
 
     """
     Retrieve the quota information for a given tenant URI.
@@ -777,15 +777,24 @@ def get_tenant_quota(tenant_uri: str, session: requests.Session):
 
     return {'storage': {'name': 'storage_allocated', 'storage_gb': storage, 'storage_uri': storage_uri}, 'memory': {'name': 'mem_allocated', 'memory_gb': memory, 'memory_uri': memory_uri}, 'cpu':  {'name': 'cpu_allocated', 'cpu_count': cpu, 'cpu_uri': cpu_uri}}
 
-def get_vm_os(url: str, session = session):
+def get_vm_os(url: str, session: requests.Session = session):
+    """
+    Retrieve the operating system information for a given VM resource URL.
 
-    if url is None:
-        print("Url was not provided for VM !!!")
+    Args:
+        url (str): The URL of the VM resource.
+        session (requests.Session): Default parameter for passing a requests Session object.
+
+    Returns:
+        dict: A dictionary containing operating system details for the VM.
+    """
+    
+    if url is None or url == 1:
+        print("URL was not provided for VM!!!")
         return 1
 
-    elif url == 1:
-        print("Url was not provided for VM !!!")
-        return 1
+    if session is None:
+        session = requests.Session()
 
     vm_resource_url = str(url)
     #print("Extracting OS for VM resource url: ", vm_resource_url)
@@ -803,7 +812,7 @@ def get_vm_os(url: str, session = session):
 
 # Checking if service attached to VM and updating attached service name
 
-def get_vm_service(url: str,  session = session):
+def get_vm_service(url: str, session: requests.Session = session):
     """
     Get a service attached to the VM based on the provided URL using the specified requests Session.
 
@@ -817,17 +826,12 @@ def get_vm_service(url: str,  session = session):
 
     vm_name = ''
 
-    if url is None:
-        print(f"Url was not provided for VM with a name - {vm_name}!!!")
+    if url is None or url == 1 or len(url) == 0:
+        print("URL was not provided!")
         return 1
 
-    elif url == 1:
-        print(f"URL is not provided!!!")
-        return 1
-    
-    elif len(url) == 0:
-        print(f"URL is not provided!!!")
-        return 1
+    if session is None:
+        session = requests.Session()
 
     vm_resource_url = str(url)
     #print("Extracting OS for VM resource url: ", vm_resource_url)
@@ -849,8 +853,23 @@ def get_vm_service(url: str,  session = session):
 
     return {"data": svc_data, "svc_details": svc_data['service'], "svc_name": svc_data['service']['name'], "id": svc_data['service']['id'], 'vm_name': vm_name}
 
-def update_service_name(service_id: Union[int, str], vm_name: str, api_url: str = 'https://manageiqr00.gts.rus.socgen/api'):
+def update_service_name(service_id: Union[int, str], vm_name: str, api_url: str = api_url, session: requests.Session = session):
 
+    """
+    Update the name of a service identified by its ID with a new name based on the provided VM name.
+
+    Args:
+        service_id (Union[int, str]): The ID of the service to be updated.
+        vm_name (str): The name of the VM to be included in the new service name.
+        api_url (str): The base URL of the API.
+        session (requests.Session): An existing requests Session object for making HTTP requests.
+
+    Returns:
+        requests.Response: The response object from the POST request.
+    """
+    if session is None:
+        session = requests.Session()
+        
     service_headers = { 'Content-Type': 'application/json'}
 
     service_url = f"{api_url}/services/{str(service_id)}"
