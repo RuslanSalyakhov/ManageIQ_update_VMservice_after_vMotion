@@ -651,6 +651,20 @@ def get_user(user_id: str, api_url: str = api_url, session: requests.Session = s
 
 # QUOTA GET and UPDATE functions
 def update_quota(uri_dict, cpu=0, memory=0, storage=0, session: requests.Session = session):
+    
+    """
+    Update resource quotas based on the provided URI dictionary and resource adjustments.
+    
+    Args:
+        uri_dict (dict): A dictionary containing URIs for different resources.
+        cpu (int): The amount of CPU cores to be added.
+        memory (int): The amount of memory (in GB) to be added.
+        storage (int): The amount of storage (in GB) to be added.
+        session (requests.Session): Optional parameter for passing a requests Session object.
+
+    Returns:
+        list: A list of responses from the POST requests made during quota updates.
+    """
     result = []
     flag = False
     value_ = ''
@@ -688,7 +702,23 @@ def update_quota(uri_dict, cpu=0, memory=0, storage=0, session: requests.Session
 
     return result
 
-def get_tenant_uri(ci_name: str, api_url: str = api_url, session=session):
+def get_tenant_uri(ci_name: str, api_url: str = api_url, session: requests.Session = session):
+
+    """
+    Retrieve the URI for a given CI name from the tenant API.
+
+    Args:
+        ci_name (str): The name of the CI in format 'rsb_ci85262'.
+        api_url (str): The base URL of the API.
+        session (requests.Session): Optional parameter for passing a requests Session object.
+
+    Returns:
+        str: The URI of the tenant.
+    """
+    
+    if session is None:
+        session = requests.Session()
+        
     # ci_name in format 'rsb_ci85262'
     tenant_url = f"{api_url}/tenants?expand=resources&attributes=name&filter[]=name={str(ci_name)}"
     #tenant_url = f"https://manageiqr00.gts.rus.socgen/api/tenants?expand=resources&attributes=name&filter[]=name={str(ci_name)}"
@@ -700,7 +730,21 @@ def get_tenant_uri(ci_name: str, api_url: str = api_url, session=session):
 
     return uri
 
-def get_tenant_quota(tenant_uri: str, session=session):
+def get_tenant_quota(tenant_uri: str, session: requests.Session):
+
+    """
+    Retrieve the quota information for a given tenant URI.
+
+    Args:
+        tenant_uri (str): The URI of the tenant.
+        session (requests.Session): Optional parameter for passing a requests Session object.
+
+    Returns:
+        dict: A dictionary containing quota information for storage, memory, and CPU.
+    """
+    if session is None:
+        session = requests.Session()
+        
     # ci_name in format 'rsb_ci85262'
     quota_url = f"{str(tenant_uri)}/quotas?expand=resources&attributes=name,value,unit,used,available,total"
 
