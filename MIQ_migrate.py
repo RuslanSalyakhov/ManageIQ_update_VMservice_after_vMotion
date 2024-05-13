@@ -3,7 +3,7 @@ import json
 import pandas as pd
 import urllib3
 from bs4 import BeautifulSoup
-from typing import Union
+from typing import Union, Dict
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class color:
