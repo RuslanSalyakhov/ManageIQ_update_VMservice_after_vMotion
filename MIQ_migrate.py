@@ -147,7 +147,59 @@ def assign_tag(url: str, vmtype: str, category: str = 'vmtype', session: request
         print(f"Assigned tag to the object with url - {url}: {color.BOLD}{color.BLUE}{vmtype.upper()}{color.END}!")
 
     return assign_tag_response
+    
+def get_vm_hardware(url: str, vm_name: str, session: requests.Session = session):
+    """
+    Get the VM hardware details.
 
+    Parameters:
+    - url (str): The URL for the VM resource.
+    - vm_name (str): The name of the VM.
+    - session (requests.Session): The session object.
+
+    Returns:
+    - dict: Dictionary containing hardware details.
+    """
+    # Parameter validation
+    if not url or not vm_name:
+        print("URL or VM name is not provided!!!")
+        return None
+
+    vm_resource_url = url
+
+    # Get tags for specified VM resource
+    vm_hardware_url = f"{vm_resource_url}?expand=resources&attributes=hardware,disks"
+
+    try:
+        hardware_response = session.get(vm_hardware_url)
+        hardware_response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"Error getting VM hardware details: {e}")
+        return None
+
+    hardware_data = hardware_response.json()
+    
+    vm_cpu = hardware_data['hardware']['cpu_total_cores']
+    vm_memory_gb = int(hardware_data['hardware']['memory_mb']) / 1024.0
+    vm_disks = hardware_data['disks']
+    
+    size_byte = 0
+    size_gb = 0
+
+    for i in vm_disks:
+        if i['device_type'] == 'disk':
+            size_byte += int(i['size'])
+    size_gb = size_byte / (1024*1024*1024.0)
+    
+    print(f"{vm_name} has CPU: {color.BOLD}{color.VIOLET}{vm_cpu}{color.END} MemoryGB: {color.YELLOW}{vm_memory_gb}{color.END} SizeGB: {color.GREEN}{size_gb}{color.END}")
+    
+    return {
+        "data": hardware_data, 
+        "cpu": vm_cpu, 
+        "memory": vm_memory_gb, 
+        "size": size_gb
+    }
+    
 def get_vm_os(url: str, vm_name: str, session: requests.Session = session):
     """
     Get the operating system details for a VM.
