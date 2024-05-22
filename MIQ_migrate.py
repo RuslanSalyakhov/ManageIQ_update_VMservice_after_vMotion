@@ -805,7 +805,7 @@ def get_tenant_quota(tenant_uri: str, session: requests.Session = session):
 
     for q in quota_data['resources']:
         if q['name'] == 'storage_allocated':
-            storage = float(q['value'])/(1024*1024*1024)
+            storage = round(float(q['value'])/(1024*1024*1024), 3)
             storage_uri = q['href']
             storage_used = round(float(q['used'])/(1024*1024*1024), 3)
             storage_avail = round(float(q['available'])/(1024*1024*1024), 3)
