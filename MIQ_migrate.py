@@ -354,6 +354,7 @@ def get_vm_url(name: str, state: str = 'on', api_url: str = api_url, session: re
         vm_response = session.get(vm_url)
         vm_data = json.loads(vm_response.text)
         vm_len = len(vm_data["resources"])
+        print(vm_url)
 
         if  vm_len == 0:
             print("VM with state ON - Not found. Checking for VM name in lowercase form")
@@ -418,6 +419,66 @@ def get_vm_url(name: str, state: str = 'on', api_url: str = api_url, session: re
                          else:
                             print(f"VM resource with name {vm_name} with state {state.upper()} doesn't exist!!!")
                             return 1   
+    
+    elif state == 'off':
+        
+        vm_url = f"{api_url}/vms?filter[]=name='{vm_name}'&filter[]=power_state='off'"
+
+        # Checking if there is VMs with state ON. If not checking with state Off
+        vm_response = session.get(vm_url)
+        vm_data = json.loads(vm_response.text)
+        vm_len = len(vm_data["resources"])
+        print(vm_url)
+
+        if  vm_len == 0:
+            print("VM with state OFF - Not found. Checking for VM name in lowercase form")
+
+            vm_url = f"{api_url}/vms?filter[]=name='{vm_name.lower()}'&filter[]=power_state='off'"
+
+            vm_response = session.get(vm_url)
+            vm_data = json.loads(vm_response.text)
+            vm_len = len(vm_data["resources"])
+
+            
+            if vm_len == 0:
+                    print("VM with state OFF - Not found. Checking for VM name in ANY case form")
+                    vms_url =  f"{api_url}/vms?expand=resources&attributes=name,power_state='off'"
+
+                    vms_response = session.get(vms_url)
+                    vms_data = json.loads(vms_response.text)
+
+                    max_len =  float('inf')
+                    found_flag = False
+                    for i in vms_data['resources']:
+                        
+                        if str(vm_name).lower() in str(i['name']).lower():
+                    
+                            vm_url = i['href']
+                            resource_name = i['name']
+                            vm_state = i['power_state']
+                            print(f"VM with state {str(vm_state).upper()} with url " + color.BOLD + str(vm_url) + "  has name - " + color.BOLD + color.BLUE + str(resource_name) + color.END + " with SOME lower case letters used " + color.RED + "INCORRECTLY!" + color.END)
+                        
+                            if len(vm_name) == len(resource_name):
+                            
+                                return vm_url, vms_data
+
+                            elif (len(vm_name) < len(resource_name)) and (len(resource_name) < max_len):
+
+                                max_len = len(resource_name)
+                                result_url = vm_url
+                                result_name = resource_name 
+                                result_state = vm_state
+                                found_flag = True
+
+                    if found_flag:
+
+                        print(f"Finally for VM " + color.BOLD + color.CYAN + str(vm_name) + color.END + f" with state {str(result_state).upper()} with url " + color.BOLD + str(result_url) + "  has name - " + color.BOLD + color.BLUE + str(result_name) + color.END)
+                        return result_url, vms_data 
+                        
+                    else:
+                        print(f"VM resource with name {vm_name} with state {state.upper()} doesn't exist!!!")
+                    return 1  
+
     if state == 'on':
         subcount = int(vm_data['subcount']) 
         if subcount > 1:
