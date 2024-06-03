@@ -148,21 +148,20 @@ def assign_tag(url: str, vmtype: str, category: str = 'vmtype', session: request
 
     return assign_tag_response
     
-def get_vm_hardware(url: str, vm_name: str, session: requests.Session = session):
+def get_vm_hardware(url: str, session: requests.Session = session):
     """
     Get the VM hardware details.
 
     Parameters:
     - url (str): The URL for the VM resource.
-    - vm_name (str): The name of the VM.
     - session (requests.Session): The session object.
 
     Returns:
     - dict: Dictionary containing hardware details.
     """
     # Parameter validation
-    if not url or not vm_name:
-        print("URL or VM name is not provided!!!")
+    if not url:
+        print("URL is not provided!!!")
         return None
 
     vm_resource_url = url
@@ -178,11 +177,13 @@ def get_vm_hardware(url: str, vm_name: str, session: requests.Session = session)
         return None
 
     hardware_data = hardware_response.json()
+    vm_name = hardware_data['name']
     
     vm_cpu = hardware_data['hardware']['cpu_total_cores']
     vm_memory_gb = int(hardware_data['hardware']['memory_mb']) / 1024.0
     vm_disks = hardware_data['disks']
     
+
     size_byte = 0
     size_gb = 0
 
@@ -193,6 +194,7 @@ def get_vm_hardware(url: str, vm_name: str, session: requests.Session = session)
     
     print(f"{vm_name} has CPU: {color.BOLD}{color.VIOLET}{vm_cpu}{color.END} MemoryGB: {color.YELLOW}{vm_memory_gb}{color.END} SizeGB: {color.GREEN}{size_gb}{color.END}")
     
+
     return {
         "data": hardware_data, 
         "cpu": vm_cpu, 
