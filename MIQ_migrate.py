@@ -765,7 +765,7 @@ def get_user(user_id: str, api_url: str = api_url, session: requests.Session = s
     return user_name
 
 # QUOTA GET and UPDATE functions
-def update_quota(uri_dict, cpu=0, memory=0, storage=0, session: requests.Session = session):
+def update_quota(uri_dict, cpu=0, memory=0, storage=0, operation: str = 'add', session: requests.Session = session):
     
     """
     Update resource quotas based on the provided URI dictionary and resource adjustments.
@@ -775,30 +775,46 @@ def update_quota(uri_dict, cpu=0, memory=0, storage=0, session: requests.Session
         cpu (int): The amount of CPU cores to be added.
         memory (int): The amount of memory (in GB) to be added.
         storage (int): The amount of storage (in GB) to be added.
+        operation (add): The operation add or subtract quota. By default adding quota
         session (requests.Session): Default parameter for passing a requests Session object.
 
     Returns:
         list: A list of responses from the POST requests made during quota updates.
     """
     result = []
-    flag = False
-    value_ = ''
+    
     for i in uri_dict:
+        flag = False
+        value_ = ''
+
         if i == 'storage' and storage != 0:
-            value_gb = uri_dict[i]['storage_gb'] + float(storage)
+            if 'sub' in operation:
+                value_gb = uri_dict[i]['storage_gb'] - float(storage)
+            else:
+                value_gb = uri_dict[i]['storage_gb'] + float(storage)
+
             print("Storage new value :", value_gb, "GB")
             value_ = value_gb * (1024*1024*1024)
             url = uri_dict[i]['storage_uri']
             flag = True
 
         elif i == 'memory' and memory != 0:
-            value_gb = uri_dict[i]['memory_gb'] + float(memory)
+            if 'sub' in operation:
+                value_gb = uri_dict[i]['memory_gb'] - float(memory)
+            else:
+                value_gb = uri_dict[i]['memory_gb'] + float(memory)
+
             print("Memory new value :", value_gb, "GB")
             value_ = value_gb * (1024*1024*1024)
             url = uri_dict[i]['memory_uri']
             flag = True
+            
         elif i == 'cpu' and cpu != 0:
-            value_ = int(uri_dict[i]['cpu_count']) + int(cpu)
+            if 'sub' in operation:
+                value_ = int(uri_dict[i]['cpu_count']) - int(cpu)
+            else:
+                value_ = int(uri_dict[i]['cpu_count']) + int(cpu)
+
             print("CPU new value :", value_, "cores")
 
             url = uri_dict[i]['cpu_uri']
