@@ -201,51 +201,6 @@ def get_vm_hardware(url: str, session: requests.Session = session):
         "memory": vm_memory_gb, 
         "size": size_gb
     }
-    
-def get_vm_os(url: str, vm_name: str, session: requests.Session = session):
-    """
-    Get the operating system details for a VM.
-
-    Parameters:
-    - url (str): The URL for the VM resource.
-    - vm_name (str): The name of the VM.
-    - session (requests.Session): The session object.
-
-    Returns:
-    - dict: Dictionary containing OS details.
-    """
-    # Parameter validation
-    if not url or not vm_name:
-        print("URL or VM name is not provided!!!")
-        return None
-
-    vm_resource_url = url
-
-    # Get tags for specified VM resource
-    vm_os_url = f"{vm_resource_url}?expand=resources&attributes=operating_system"
-
-    try:
-        os_response = session.get(vm_os_url)
-        os_response.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        print(f"Error getting VM OS: {e}")
-        return None
-
-    os_data = os_response.json()
-    
-    os_name = os_data['operating_system']['product_name']
-    
-    if os_name:
-        print(f"{vm_name} has OS {сolor.BOLD}{сolor.VIOLET}{os_name}{сolor.END}!")
-    else:
-        print(f"Operating system details not found for {vm_name}.")
-
-    return {
-        "data": os_data, 
-        "os_details": os_data['operating_system'], 
-        "os_name": os_data['operating_system']['product_name'], 
-        "id": os_data['operating_system']['id']
-    }
 
 def get_vm_url(name: str, state: str = 'on', api_url: str = api_url, session: requests.Session = session):
     """
