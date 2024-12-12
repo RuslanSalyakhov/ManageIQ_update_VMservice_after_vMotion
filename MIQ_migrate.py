@@ -50,7 +50,7 @@ def delete_service(url: str, session: requests.Session = session):
     """
     if len(url) == 0:
         print("Deleting Service or VM...   " + color.WARNING + "Service URL is not present!" + color.END)
-        return
+        return None
     
     try:
         delete_response = session.delete(url)
@@ -642,7 +642,8 @@ def get_service_url_tags(vm_resource_name: str, api_url: str = api_url, session:
 
                 elif not found_flag and (len(service_name) != len(vm_resource_name)):
                      print("Service with the name " + color.BOLD + color.BLUE + vm_name + color.WARNING + " Not Exists!\n" + color.END)
-                     return {'url': "", 'tags': "", 'data': "" }
+                     #return {'url': "", 'tags': "", 'data': "" }
+                     return 1
 
             else:
                 service_resource_url = service_data["resources"][0]['href']
